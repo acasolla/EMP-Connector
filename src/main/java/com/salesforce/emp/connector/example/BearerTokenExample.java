@@ -21,31 +21,30 @@ import org.eclipse.jetty.util.ajax.JSON;
  *
  * @author hal.hildebrand
  * @since API v37.0
+ * https://login.salesforce.com/ 
+ /topic/ExternalRoutingPSR
  */
 public class BearerTokenExample {
+	private final static String login = "https://na174.salesforce.com";
+	private final static String token = "00D6g000000FMJm!ARsAQNKojZywZYGfIMP7d4SI8Gd_XHmAZmzRcNEwGOkj2wHhMJeoUCmkASHJUdDqwYG9bXS2BeukC3YUHiqfxWUZXWT8wszD";
+	private final static String topic = "/topic/ExternalRoutingPSR";
+	private final static long replayFrom = EmpConnector.REPLAY_FROM_EARLIEST;
     public static void main(String[] argv) throws Exception {
-        if (argv.length < 2 || argv.length > 4) {
-            System.err.println("Usage: BearerTokenExample url token topic [replayFrom]");
-            System.exit(1);
-        }
-        long replayFrom = EmpConnector.REPLAY_FROM_EARLIEST;
-        if (argv.length == 4) {
-            replayFrom = Long.parseLong(argv[3]);
-        }
+       
 
         BayeuxParameters params = new BayeuxParameters() {
 
             @Override
             public String bearerToken() {
-                return argv[1];
+                return token;
             }
 
             @Override
             public URL host() {
                 try {
-                    return new URL(argv[0]);
+                    return new URL(login);
                 } catch (MalformedURLException e) {
-                    throw new IllegalArgumentException(String.format("Unable to create url: %s", argv[0]), e);
+                    throw new IllegalArgumentException(String.format("Unable to create url: %s", login), e);
                 }
             }
         };
@@ -59,7 +58,7 @@ public class BearerTokenExample {
 
         connector.start().get(5, TimeUnit.SECONDS);
 
-        TopicSubscription subscription = connector.subscribe(argv[2], replayFrom, consumer).get(5, TimeUnit.SECONDS);
+        TopicSubscription subscription = connector.subscribe(topic, replayFrom, consumer).get(5, TimeUnit.SECONDS);
 
         System.out.println(String.format("Subscribed: %s", subscription));
     }

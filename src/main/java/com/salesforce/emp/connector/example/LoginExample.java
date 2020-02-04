@@ -24,6 +24,11 @@ import com.salesforce.emp.connector.TopicSubscription;
  *
  * @author hal.hildebrand
  * @since API v37.0
+ * sfdc.loginUrl=https://cti-connector-test.my.salesforce.com
+sfdc.username=alessandro.casolla.omni@softphone.it
+sfdc.password=Softphone1fx91Ec8CmgTw7FBBIvYq0TezP
+sfdc.psr.topic=/topic/ExternalRoutingPSR
+
  */
 public class LoginExample {
     public static void main(String[] argv) throws Exception {

@@ -282,11 +282,11 @@ public class EmpConnector {
 		}
 
 		String bearerToken = bearerToken();
-
+		logger.info("bearerToken : {}",bearerToken);
 		LongPollingTransport httpTransport = new LongPollingTransport(parameters.longPollingOptions(), httpClient) {
 			@Override
 			protected void customize(Request request) {
-				logger.info("httpTransport customize, request : {}",request);
+				logger.info("httpTransport customize, request : {}",request.getURI());
 				request.header(AUTHORIZATION, bearerToken);
 				
 			}
