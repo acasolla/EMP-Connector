@@ -94,19 +94,19 @@ public class EmpConnector {
 			ClientSessionChannel channel = client.getChannel(topic);
 			CompletableFuture<TopicSubscription> future = new CompletableFuture<>();
 
-			channel.subscribe((c, message) -> consumer.accept(message.getDataAsMap()), (c, message) -> {
-				if (message.isSuccessful()) {
-					future.complete(this);
-				} else {
-					Object error = message.get(ERROR);
-					if (error == null) {
-						error = message.get(FAILURE);
-					}
-					future.completeExceptionally(new CannotSubscribe(parameters.endpoint(), topic, replayFrom,
-							error != null ? error : message));
-				}
-			});
-			return future;
+			channel.subscribe((c, message) -> consumer.accept(message.getDataAsMap()), (message) -> {
+                if (message.isSuccessful()) {
+                    future.complete(this);
+                } else {
+                    Object error = message.get(ERROR);
+                    if (error == null) {
+                        error = message.get(FAILURE);
+                    }
+                    future.completeExceptionally(
+                            new CannotSubscribe(parameters.endpoint(), topic, replayFrom, error != null ? error : message));
+                }
+            });
+            return future;
 		}
 	}
 
@@ -132,7 +132,7 @@ public class EmpConnector {
 		this.parameters = parameters;
 		httpClient = new HttpClient(parameters.sslContextFactory());
 		httpClient.getProxyConfiguration().getProxies().addAll(parameters.proxies());
-		logger.info("proxyes : {}", parameters.proxies());
+		//logger.info("proxyes : {}", parameters.proxies());
 		AuthenticationStore authenticationStore = httpClient.getAuthenticationStore();
 		for (Authentication auth : parameters.authentications()) {
 			logger.info("proxy auth: {}", parameters.proxies());
@@ -157,19 +157,26 @@ public class EmpConnector {
 		future.complete(true);
 		return future;
 	}
+	
+	 /**
+     * Disconnecting Bayeux Client in Emp Connector
+     */
+    private void disconnect() {
+        if (!running.compareAndSet(true, false)) {
+            return;
+        }
+        if (client != null) {
+        	logger.info("Disconnecting Bayeux Client in EmpConnector");
+            client.disconnect();
+            client = null;
+        }
+    }
 
 	/**
 	 * Stop the connector
 	 */
 	public void stop() {
-		if (!running.compareAndSet(true, false)) {
-			return;
-		}
-		if (client != null) {
-			logger.info("Disconnecting Bayeux Client in EmpConnector");
-			client.disconnect();
-			client = null;
-		}
+		disconnect();
 		if (httpClient != null) {
 			try {
 				httpClient.stop();
@@ -216,6 +223,19 @@ public class EmpConnector {
 
 		return subscription.subscribe();
 	}
+	
+	/**
+     * Unsubscribe to a topic subscription
+     *
+     * @param topic
+     *            - the topic subscribed
+     */
+    public void unsubscribe(String topic) {
+        subscriptions.stream()
+                .filter(subscription -> subscription.getTopic().equalsIgnoreCase(topic))
+                .findAny()
+                .ifPresent(SubscriptionImpl::cancel);
+    }
 
 	/**
 	 * Subscribe to a topic, receiving events from the earliest event position in
@@ -273,7 +293,9 @@ public class EmpConnector {
 		CompletableFuture<Boolean> future = new CompletableFuture<>();
 
 		try {
-			httpClient.start();
+			if (!httpClient.isStarted()) {
+                httpClient.start();
+            }
 		} catch (Exception e) {
 			logger.error("Unable to start HTTP transport[{}]", parameters.endpoint(), e);
 			running.set(false);
@@ -364,7 +386,7 @@ public class EmpConnector {
 			if (!message.isSuccessful()) {
 				if (isError(message, ERROR_401) || isError(message, ERROR_403)) {
 					reauthenticate.set(true);
-					stop();
+					disconnect();
 					reconnect();
 				}
 			}
